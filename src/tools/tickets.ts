@@ -5,7 +5,7 @@ import { CwManageClient } from "../api-client.js";
 export function registerTicketTools(server: McpServer, client: CwManageClient) {
   server.tool(
     "cw_search_tickets",
-    "Search service tickets in ConnectWise Manage. Use 'conditions' for CW query syntax (e.g. \"status/name != 'Closed'\" or \"company/name = 'Acme'\"). Use 'fields' to limit response size. For a total count only, use cw_count_tickets instead.",
+    "Search service tickets in ConnectWise Manage. Use 'conditions' for CW query syntax (e.g. \"status/name != 'Closed'\" or \"company/name = 'Acme'\"). Audit/timestamp metadata (creation date, last updated, entered by) lives under the nested _info object, not as top-level fields — e.g. use \"_info/dateEntered > '2024-01-01T00:00:00Z'\" for creation date, NOT 'dateEntered' or 'createdDate'. Use 'fields' to limit response size. For a total count only, use cw_count_tickets instead.",
     {
       conditions: z
         .string()
@@ -24,7 +24,7 @@ export function registerTicketTools(server: McpServer, client: CwManageClient) {
         .string()
         .optional()
         .describe(
-          "Comma-separated list of fields to return, to reduce response size (e.g. 'id,summary,status/name,company/name'). Supports dot notation for nested fields. Omit to return the full ticket object.",
+          "Comma-separated list of ticket fields to return, to reduce response size. 'id' is always included. Supports dot notation for nested object subfields (e.g. 'status/name' instead of the full 'status' object). Common top-level fields: id, summary, recordType, board/name, status/name, priority/name, severity, impact, company/name, contact/name, site/name, type/name, subType/name, item/name, team/name, owner/identifier, source/name, resolutionGoalUTC, closedFlag, closedDate (present when closedFlag=true), closedBy, budgetHours, actualHours, agreement/name, sla/name, slaStatus. Audit/timestamp metadata lives under the nested _info object instead of top-level: _info/dateEntered (creation date), _info/lastUpdated, _info/enteredBy. Omit 'fields' to return the full ticket object. If unsure which fields exist, call cw_search_tickets once without 'fields' first to inspect the full object shape.",
         ),
     },
     async ({ conditions, page, pageSize, orderBy, fields }) => {
