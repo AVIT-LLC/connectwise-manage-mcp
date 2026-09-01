@@ -6,7 +6,7 @@ import { buildTicketCard, TICKET_CARD_META } from "../card.builder.js";
 export function registerTicketTools(server: McpServer, client: CwManageClient) {
   server.tool(
     "cw_search_tickets",
-    "Search service tickets in ConnectWise Manage. Use 'conditions' for CW query syntax (e.g. \"status/name != 'Closed'\" or \"company/name = 'Acme'\").",
+    "Search service tickets in ConnectWise Manage. Use 'conditions' for CW query syntax (e.g. \"status/name != 'Closed'\" or \"company/name = 'Acme'\"). Use 'fields' to limit response size. For a total count only, use cw_count_tickets instead.",
     {
       conditions: z
         .string()
@@ -21,13 +21,37 @@ export function registerTicketTools(server: McpServer, client: CwManageClient) {
         .string()
         .optional()
         .describe("Field to order by (e.g. 'id desc')"),
+      fields: z
+        .string()
+        .optional()
+        .describe(
+          "Comma-separated list of fields to return, to reduce response size (e.g. 'id,summary,status/name,company/name'). Supports dot notation for nested fields. Omit to return the full ticket object.",
+        ),
     },
-    async ({ conditions, page, pageSize, orderBy }) => {
+    async ({ conditions, page, pageSize, orderBy, fields }) => {
       const result = await client.get("/service/tickets", {
         conditions,
         page: page ?? 1,
         pageSize: pageSize ?? 25,
         orderBy,
+        fields,
+      });
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    },
+  );
+
+  server.tool(
+    "cw_count_tickets",
+    "Count service tickets matching a query, without returning the ticket records themselves. Use this instead of cw_search_tickets when the user only wants a total (e.g. 'how many tickets were opened today?').",
+    {
+      conditions: z
+        .string()
+        .optional()
+        .describe("ConnectWise conditions query string"),
+    },
+    async ({ conditions }) => {
+      const result = await client.get("/service/tickets/count", {
+        conditions,
       });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     },
